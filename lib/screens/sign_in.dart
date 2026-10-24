@@ -1,21 +1,24 @@
+import 'dart:math' as math;
+
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../services/auth.dart';
 import '../theme/prefs.dart';
-import 'home.dart';
+import 'onboarding.dart';
 
-const Color _bg = Color(0xFFFFF9F2);
-const Color _ink = Color(0xFF1B1B1F);
-const Color _muted = Color(0xFF6C6C75);
-const Color _orange = Color(0xFFE08813);
+/// The logo's own background colour: the whole welcome screen is this orange.
+const Color kGoOrange = Color(0xFFE08813);
+const Color _ink = Color(0xFF14110F);
 
-/// Shows the app when someone is signed in, otherwise the sign-in page.
+// Logo geometry (original image is 1024 x 1024). The runner's foot and the
+// bottom of the speed lines sit at about y = 805.
+const double _kFootY = 805 / 1024;
+
+/// Shows the app when someone is signed in, otherwise the welcome page.
 class AuthGate extends StatelessWidget {
-  /// Wait this long before the sign-in page animates in (the intro is still playing).
-  final Duration entranceDelay;
-  const AuthGate({super.key, this.entranceDelay = Duration.zero});
+  const AuthGate({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -23,14 +26,14 @@ class AuthGate extends StatelessWidget {
       stream: FirebaseAuth.instance.authStateChanges(),
       builder: (context, snap) {
         if (snap.connectionState == ConnectionState.waiting) {
-          return const Scaffold(backgroundColor: _bg);
+          return const Scaffold(backgroundColor: kGoOrange);
         }
         final u = snap.data;
         return ValueListenableBuilder<bool>(
           valueListenable: AuthService.guest,
           builder: (context, guest, _) {
-            if (u != null && (!u.isAnonymous || guest)) return const HomeGate();
-            return SignInScreen(entranceDelay: entranceDelay);
+            if (u != null && (!u.isAnonymous || guest)) return const PostAuthGate();
+            return const WelcomeScreen();
           },
         );
       },
@@ -38,23 +41,39 @@ class AuthGate extends StatelessWidget {
   }
 }
 
-class SignInScreen extends StatefulWidget {
-  final Duration entranceDelay;
-  const SignInScreen({super.key, this.entranceDelay = Duration.zero});
-  @override
-  State<SignInScreen> createState() => _SignInScreenState();
+double _seg(double t, double a, double b, [Curve c = Curves.linear]) {
+  if (t <= a) return 0;
+  if (t >= b) return 1;
+  return c.transform((t - a) / (b - a));
 }
 
-class _SignInScreenState extends State<SignInScreen> with SingleTickerProviderStateMixin {
+/// Splash + sign-in in one screen: the logo appears, "Connect to GitHub" rises
+/// from the bottom and trips over the runner's foot, then "Connect to Google" follows.
+class WelcomeScreen extends StatefulWidget {
+  const WelcomeScreen({super.key});
+  @override
+  State<WelcomeScreen> createState() => _WelcomeScreenState();
+}
+
+class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProviderStateMixin {
   late final AnimationController _c =
-      AnimationController(vsync: this, duration: const Duration(milliseconds: 1100));
+      AnimationController(vsync: this, duration: const Duration(milliseconds: 3400));
+  bool _started = false;
   String? _busy;
 
   @override
-  void initState() {
-    super.initState();
-    Future.delayed(widget.entranceDelay, () {
-      if (mounted) _c.forward();
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_started) return;
+    _started = true;
+    final reduce = prefs.reduceMotionFor(context);
+    precacheImage(const AssetImage('assets/images/go_logo.png'), context).then((_) {
+      if (!mounted) return;
+      if (reduce) {
+        _c.value = 1;
+      } else {
+        _c.forward();
+      }
     });
   }
 
@@ -75,101 +94,133 @@ class _SignInScreenState extends State<SignInScreen> with SingleTickerProviderSt
     }
   }
 
-  /// Staggered fade + rise, item [i] of the page.
-  Widget _in(int i, Widget child) {
-    final reduce = prefs.reduceMotionFor(context);
-    if (reduce) return child;
-    final a = (i * 0.11).clamp(0.0, 0.7);
-    final anim = CurvedAnimation(parent: _c, curve: Interval(a, (a + 0.45).clamp(0.0, 1.0), curve: Curves.easeOutCubic));
-    return AnimatedBuilder(
-      animation: anim,
-      builder: (_, w) => Opacity(
-        opacity: anim.value,
-        child: Transform.translate(offset: Offset(0, 24 * (1 - anim.value)), child: w),
-      ),
-      child: child,
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
-    final head = GoogleFonts.fredoka(fontSize: 42, height: 1.05, fontWeight: FontWeight.w700, color: _ink);
-    final body = GoogleFonts.lexend(fontSize: 16, height: 1.5, color: _muted);
+    final mq = MediaQuery.of(context);
+    final w = mq.size.width, h = mq.size.height;
+    const btnH = 58.0, gap = 12.0, footer = 96.0;
+    final btnW = math.min(w - 48, 440.0);
+    final left = (w - btnW) / 2;
+
+    // Logo as large as fits: leave room for two buttons and the footer below it.
+    final top = mq.padding.top + 16;
+    final room = h - top - mq.padding.bottom - footer - btnH * 2 - gap - 24;
+    final s = math.max(200.0, math.min(math.min(w * 0.94, 520.0), room / _kFootY));
+    final logoLeft = (w - s) / 2;
+    final ghTop = top + s * _kFootY + 2;
+    final gTop = ghTop + btnH + gap;
+
     return Scaffold(
-      backgroundColor: _bg,
-      body: SafeArea(
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 460),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  _in(
-                    0,
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(16),
-                        child: Image.asset('assets/images/go_logo.png', width: 60, height: 60),
-                      ),
-                    ),
+      backgroundColor: kGoOrange,
+      body: AnimatedBuilder(
+        animation: _c,
+        builder: (context, _) {
+          final t = _c.value;
+
+          // Logo eases in.
+          final lp = _seg(t, 0.0, 0.14, Curves.easeOutBack);
+          final lo = _seg(t, 0.0, 0.08);
+
+          // GitHub: accelerates upward, hits the foot, stumbles and wobbles to rest.
+          final rise = _seg(t, 0.16, 0.36, Curves.easeInQuad);
+          final ghY = (h - ghTop + 20) * (1 - rise);
+          final u = _seg(t, 0.36, 0.64);
+          final hit = t >= 0.36;
+          final wobble = hit ? -0.15 * math.exp(-4.5 * u) * math.cos(u * 15) : 0.0;
+          final hop = hit ? -16 * math.exp(-6 * u) * math.sin(u * 18).abs() : 0.0;
+
+          // Google: follows with a little overshoot.
+          final g = _seg(t, 0.50, 0.74, Curves.easeOutBack);
+          final gY = (h - gTop + 20) * (1 - g);
+
+          final tail = _seg(t, 0.76, 0.92);
+          final ghReady = t >= 0.64;
+          final gReady = t >= 0.74;
+
+          return Stack(children: [
+            Positioned(
+              left: logoLeft,
+              top: top,
+              width: s,
+              height: s,
+              child: Opacity(
+                opacity: lo,
+                child: Transform.scale(
+                  scale: 0.88 + 0.12 * lp.clamp(0.0, 1.2),
+                  child: Semantics(
+                    label: 'GO',
+                    image: true,
+                    child: Image.asset('assets/images/go_logo.png', fit: BoxFit.contain),
                   ),
-                  const Spacer(),
-                  _in(1, Text('Stop dodging\nyour own\ndeadlines.', style: head)),
-                  const SizedBox(height: 16),
-                  _in(
-                    2,
-                    Text(
-                      'Pick your daily habits, keep a 30-day streak and prove it. '
-                      'Built for developers whose life runs on commits, not calendars.',
-                      style: body,
-                    ),
-                  ),
-                  const Spacer(),
-                  _in(
-                    3,
-                    _Btn(
-                      label: 'Continue with GitHub',
+                ),
+              ),
+            ),
+            if (t >= 0.16)
+              Positioned(
+                left: left,
+                top: ghTop,
+                width: btnW,
+                height: btnH,
+                child: Transform.translate(
+                  offset: Offset(0, ghY + hop),
+                  child: Transform.rotate(
+                    angle: wobble,
+                    alignment: Alignment.topLeft,
+                    child: _Btn(
+                      label: 'Connect to GitHub',
                       icon: Icons.code_rounded,
                       dark: true,
                       loading: _busy == 'gh',
-                      onTap: _busy != null ? null : () => _run('gh', AuthService.signInWithGitHub),
+                      onTap: (!ghReady || _busy != null)
+                          ? null
+                          : () => _run('gh', AuthService.signInWithGitHub),
                     ),
                   ),
-                  const SizedBox(height: 12),
-                  _in(
-                    4,
-                    _Btn(
-                      label: 'Continue with Google',
-                      icon: Icons.account_circle_outlined,
-                      loading: _busy == 'g',
-                      onTap: _busy != null ? null : () => _run('g', AuthService.signInWithGoogle),
-                    ),
+                ),
+              ),
+            if (t >= 0.50)
+              Positioned(
+                left: left,
+                top: gTop,
+                width: btnW,
+                height: btnH,
+                child: Transform.translate(
+                  offset: Offset(0, gY),
+                  child: _Btn(
+                    label: 'Connect to Google',
+                    icon: Icons.account_circle_outlined,
+                    loading: _busy == 'g',
+                    onTap: (!gReady || _busy != null)
+                        ? null
+                        : () => _run('g', AuthService.signInWithGoogle),
                   ),
-                  const SizedBox(height: 8),
-                  _in(
-                    5,
-                    TextButton(
-                      onPressed: _busy != null ? null : () => _run('guest', AuthService.continueAsGuest),
-                      style: TextButton.styleFrom(foregroundColor: _muted, minimumSize: const Size(0, 48)),
-                      child: Text('Try it without an account', style: GoogleFonts.lexend(fontSize: 14)),
-                    ),
+                ),
+              ),
+            Positioned(
+              left: 24,
+              right: 24,
+              bottom: mq.padding.bottom + 12,
+              child: Opacity(
+                opacity: tail,
+                child: Column(mainAxisSize: MainAxisSize.min, children: [
+                  TextButton(
+                    onPressed: (_busy != null || tail < 1)
+                        ? null
+                        : () => _run('guest', AuthService.continueAsGuest),
+                    style: TextButton.styleFrom(foregroundColor: _ink, minimumSize: const Size(0, 48)),
+                    child: Text('Try it without an account',
+                        style: GoogleFonts.lexend(fontSize: 14, fontWeight: FontWeight.w500)),
                   ),
-                  _in(
-                    6,
-                    Text(
-                      'Demo app. All money in GO is simulated.',
-                      textAlign: TextAlign.center,
-                      style: GoogleFonts.lexend(fontSize: 12, color: _muted),
-                    ),
+                  Text(
+                    'Demo app. All money in GO is simulated.',
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.lexend(fontSize: 12, color: _ink.withValues(alpha: 0.7)),
                   ),
-                ],
+                ]),
               ),
             ),
-          ),
-        ),
+          ]);
+        },
       ),
     );
   }
@@ -192,23 +243,18 @@ class _Btn extends StatelessWidget {
       excludeSemantics: true,
       child: Material(
         color: dark ? _ink : Colors.white,
-        elevation: dark ? 0 : 0,
         borderRadius: BorderRadius.circular(18),
+        elevation: 0,
         child: InkWell(
           borderRadius: BorderRadius.circular(18),
           onTap: onTap,
           child: Container(
-            height: 58,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(18),
-              border: dark ? null : Border.all(color: const Color(0xFFE4DCD2), width: 1.5),
-            ),
             alignment: Alignment.center,
             child: loading
                 ? SizedBox(
                     width: 22,
                     height: 22,
-                    child: CircularProgressIndicator(strokeWidth: 2.5, color: dark ? Colors.white : _orange),
+                    child: CircularProgressIndicator(strokeWidth: 2.5, color: dark ? Colors.white : kGoOrange),
                   )
                 : Row(mainAxisSize: MainAxisSize.min, children: [
                     Icon(icon, color: fg, size: 22),

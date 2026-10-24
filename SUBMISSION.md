@@ -23,6 +23,7 @@ Flutter (web, Android, iOS); Firebase Hosting, Anonymous Auth, Firestore; Gemini
 
 ## Limitations
 - **Demo-grade integrity:** the game logic runs inside the app and Firestore rules cannot stop a determined user from editing their own records. A real product needs a server to decide outcomes.
+- **Screen time is proved by screenshot, not read from the phone.** We wanted GO to read a user's real Screen Time totals and give an XP boost for low screen time. iOS only exposes that data through Apple's Screen Time APIs (FamilyControls and DeviceActivity). Using them needs a special entitlement that Apple must approve for each app, which a hackathon build cannot get in time, and Android has a similar permission wall. So the user uploads a screenshot of their Screen Time page and Gemini reads the number from it. A screenshot can be faked or edited, so this habit is self-reported with evidence, not verified. A production version would use the native APIs.
 - Money is simulated; a real version would need a licensed payment partner (e.g. Paystack or Flutterwave) and legal review.
 - The AI checker can be wrong or fooled. That is why a partner can always overrule it.
 - The Diary agent **cannot watch videos**. It matches only title, author and your own notes; sites other than YouTube/TikTok/Vimeo need a typed title.

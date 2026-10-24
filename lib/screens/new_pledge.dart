@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 import '../services/api.dart';
@@ -22,6 +24,34 @@ class _NewPledgeScreenState extends State<NewPledgeScreen> {
   final _partner = TextEditingController();
   final _github = TextEditingController();
   bool _busy = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _prefill();
+  }
+
+  /// Starter activities suggested by the questionnaire answers.
+  Future<void> _prefill() async {
+    try {
+      final uid = FirebaseAuth.instance.currentUser?.uid;
+      if (uid == null) return;
+      final s = await FirebaseFirestore.instance.doc('users/$uid').get();
+      final sug = ((s.data()?['profile'] as Map?)?['suggested'] as List?)?.cast<Map>();
+      if (sug == null || sug.isEmpty || !mounted) return;
+      if (_acts.length == 1 && _acts[0].title.text.isEmpty) {
+        setState(() {
+          _acts.clear();
+          for (final m in sug) {
+            final a = _Act();
+            a.title.text = '${m['title']}';
+            a.kind = '${m['kind']}' == 'github' ? 'github' : 'camera';
+            _acts.add(a);
+          }
+        });
+      }
+    } catch (_) {}
+  }
 
   bool get _hasGithub => _acts.any((a) => a.kind == 'github');
 
