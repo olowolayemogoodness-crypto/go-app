@@ -5,7 +5,9 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../services/api.dart';
 import '../theme/prefs.dart';
+import '../services/reading.dart';
 import '../widgets/common.dart';
+import 'books.dart';
 
 /// Personal diary: save video links, then find them by describing them.
 /// The agent reads only titles, authors and your notes. It cannot watch videos.
@@ -141,6 +143,31 @@ class _DiaryScreenState extends State<DiaryScreen> {
     );
   }
 
+  Widget _shelfCard(BuildContext context) {
+    return GestureDetector(
+      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const BooksScreen())),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(color: const Color(0xFFF1EBFB), borderRadius: BorderRadius.circular(20)),
+        child: Row(children: [
+          const Icon(Icons.auto_stories_rounded, color: Color(0xFF8A5BD6), size: 30),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              const Text('Reading shelf', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
+              StreamBuilder<int>(
+                stream: Reading.pagesToday(),
+                builder: (context, s) => Text('${s.data ?? 0} pages read today. Add a PDF and read it here.',
+                    style: const TextStyle(fontSize: 13, color: Color(0xFF6C6C75))),
+              ),
+            ]),
+          ),
+          const Icon(Icons.chevron_right_rounded),
+        ]),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final p = Pal.of(context);
@@ -152,6 +179,8 @@ class _DiaryScreenState extends State<DiaryScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          _shelfCard(context),
+          const SizedBox(height: 16),
           Text('Save videos you want to remember. Later, describe what you remember and your assistant finds it. '
               'It matches titles, authors and your notes. It cannot watch the video itself.',
               style: TextStyle(color: p.muted, height: 1.5)),

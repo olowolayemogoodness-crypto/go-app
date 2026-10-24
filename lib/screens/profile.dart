@@ -6,6 +6,7 @@ import '../services/auth.dart';
 import '../theme/prefs.dart';
 import '../widgets/common.dart';
 import '../widgets/github_widget.dart';
+import '../widgets/leaderboard.dart';
 
 /// Profile tab. The activity rings and habit editing come in a later step.
 class ProfileScreen extends StatelessWidget {
@@ -51,6 +52,8 @@ class ProfileScreen extends StatelessWidget {
               child: Text('Your activity rings and habit editing are coming next.',
                   style: TextStyle(color: p.muted, height: 1.4)),
             ),
+            const SizedBox(height: 16),
+            const LeaderboardCard(),
             const SizedBox(height: 24),
             const BigButton(label: 'Sign out', icon: Icons.logout_rounded, outlined: true, onPressed: AuthService.signOut),
           ]);

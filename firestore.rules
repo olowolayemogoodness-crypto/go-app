@@ -11,6 +11,12 @@ service cloud.firestore {
       }
     }
 
+    // Leaderboard: any signed-in user can read; you can only write your own row.
+    match /leaderboard/{uid} {
+      allow read: if signedIn();
+      allow write: if signedIn() && request.auth.uid == uid;
+    }
+
     match /pledges/{pledgeId} {
       allow read: if signedIn() && resource.data.uid == request.auth.uid;
       allow create: if signedIn() && request.resource.data.uid == request.auth.uid;

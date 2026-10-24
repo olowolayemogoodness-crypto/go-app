@@ -251,7 +251,7 @@ class _GithubScreenState extends State<GithubScreen> {
                     Text(_remind == null ? 'Off' : 'Every day at $_remind', style: GoogleFonts.lexend(fontSize: 12, color: _muted)),
                   ]),
                 ),
-                Switch(value: _remind != null, activeColor: _orange, onChanged: _toggleRemind),
+                Switch(value: _remind != null, activeThumbColor: _orange, onChanged: _toggleRemind),
               ]),
               if (_remind != null)
                 Align(

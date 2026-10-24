@@ -78,7 +78,7 @@ class DetailScreen extends StatelessWidget {
                             child: Container(
                               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
                               decoration: BoxDecoration(color: _soft, borderRadius: BorderRadius.circular(99)),
-                              child: Text('Simulated premium. No real money.',
+                              child: Text('Simulated fee. No real money.',
                                   style: GoogleFonts.lexend(fontSize: 12, fontWeight: FontWeight.w600, color: _orange)),
                             ),
                           ),
@@ -87,10 +87,10 @@ class DetailScreen extends StatelessWidget {
                             padding: const EdgeInsets.all(18),
                             decoration: BoxDecoration(color: _ink, borderRadius: BorderRadius.circular(22)),
                             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                              Text('Your premium', style: GoogleFonts.lexend(fontSize: 13, color: Colors.white70)),
+                              Text('Your commitment fee', style: GoogleFonts.lexend(fontSize: 13, color: Colors.white70)),
                               Text('${p['premium']} coins', style: GoogleFonts.fredoka(fontSize: 36, fontWeight: FontWeight.w700, color: Colors.white)),
                               const SizedBox(height: 6),
-                              Text('Win and ${p['refundAmount']} comes back.',
+                              Text('Follow through and all ${p['refundAmount']} comes back.',
                                   style: GoogleFonts.lexend(fontSize: 14, color: const Color(0xFFFFD79A))),
                             ]),
                           ),

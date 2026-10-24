@@ -10,6 +10,9 @@ import '../widgets/common.dart';
 import '../widgets/github_widget.dart';
 import '../widgets/habit_cards.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import '../widgets/leaderboard.dart';
+import '../services/reading.dart';
+import 'books.dart';
 import 'checkin.dart';
 import 'github_screen.dart';
 import 'detail.dart';
@@ -55,6 +58,11 @@ class _TodayScreenState extends State<TodayScreen> {
         _stats = Map<String, dynamic>.from(r['stats'] as Map);
         _graceLeft = (r['gracePasses'] as num).toInt();
       });
+      final st = _stats;
+      if (st != null) {
+        Leaderboard.publish(
+            streak: (st['streak'] as num?)?.toInt() ?? 0, pct: (st['overallPct'] as num?)?.toInt() ?? 0);
+      }
     } catch (_) {}
   }
 
@@ -219,14 +227,16 @@ class _TodayScreenState extends State<TodayScreen> {
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(color: pal.ink, borderRadius: BorderRadius.circular(16)),
             child: Text(
-              'Finish all $days days at 90% or more and get $refund of your $premium premium back (simulated).',
+              'Finish all $days days at 90% or more and get your $refund coin commitment fee back (simulated).',
               style: TextStyle(color: pal.sunSoft, fontWeight: FontWeight.w500, height: 1.4),
             ),
           ),
           const SizedBox(height: 22),
           Text('Your list for today', style: t.titleLarge),
           const SizedBox(height: 10),
-          for (final a in acts) _habitCard(context, p, a, day, status[a['id']] ?? 'pending'),
+          for (final a in acts.where((a) => a['kind'] == 'github'))
+            _habitCard(context, p, a, day, status[a['id']] ?? 'pending'),
+          _grid(context, p, [for (final a in acts) if (a['kind'] != 'github') a], day, status),
           if (doneN == 0 && grace > 0)
             TextButton(
               onPressed: _busy ? null : _grace,
@@ -235,6 +245,26 @@ class _TodayScreenState extends State<TodayScreen> {
         ],
       ),
     );
+  }
+
+  /// Habits side by side, two per row, equal height.
+  Widget _grid(BuildContext context, Map<String, dynamic> p, List<Map> items, int day, Map<String, String> status) {
+    final rows = <Widget>[];
+    for (var i = 0; i < items.length; i += 2) {
+      final a = items[i];
+      final b = i + 1 < items.length ? items[i + 1] : null;
+      rows.add(Padding(
+        padding: const EdgeInsets.only(bottom: 12),
+        child: IntrinsicHeight(
+          child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            Expanded(child: _habitCard(context, p, a, day, status[a['id']] ?? 'pending')),
+            const SizedBox(width: 12),
+            Expanded(child: b == null ? const SizedBox() : _habitCard(context, p, b, day, status[b['id']] ?? 'pending')),
+          ]),
+        ),
+      ));
+    }
+    return Column(children: rows);
   }
 
   Widget _xp() {
@@ -290,6 +320,40 @@ class _TodayScreenState extends State<TodayScreen> {
             _sync();
           },
         ),
+      );
+    }
+    if ('${a['title']}'.toLowerCase().startsWith('read')) {
+      final goal = int.tryParse(RegExp(r'\d+').firstMatch('${a['title']}')?.group(0) ?? '') ?? 20;
+      Future<void> camera() async {
+        await Navigator.push(
+            context,
+            MaterialPageRoute(
+                builder: (_) => CheckInScreen(
+                    pledgeId: widget.pledgeId,
+                    actId: a['id'] as String,
+                    title: '${a['title']}',
+                    kind: '${a['kind']}',
+                    day: day,
+                    partnerName: '${p['partnerName']}')));
+        _sync();
+      }
+
+      return StreamBuilder<int>(
+        stream: Reading.pagesToday(),
+        builder: (context, s) {
+          final n = s.data ?? 0;
+          return HabitCard(
+            title: '${a['title']}',
+            status: st,
+            progress: (n / goal).clamp(0.0, 1.0),
+            detail: '$n of $goal pages',
+            buttonLabel: 'Open reader',
+            onCheck: () async {
+              await Navigator.push(context, MaterialPageRoute(builder: (_) => BooksScreen(goal: goal, onCamera: camera)));
+              _sync();
+            },
+          );
+        },
       );
     }
     return HabitCard(

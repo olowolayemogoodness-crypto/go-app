@@ -59,7 +59,52 @@ class HabitCard extends StatelessWidget {
   final String title;
   final String status; // pending, passed, passed_by_partner, pending_partner, appealed, failed
   final VoidCallback onCheck;
-  const HabitCard({super.key, required this.title, required this.status, required this.onCheck});
+  final double? progress;
+  final String? detail;
+  final String? buttonLabel;
+  const HabitCard(
+      {super.key, required this.title, required this.status, required this.onCheck, this.progress, this.detail, this.buttonLabel});
+
+  static String _name(HabitType t) {
+    switch (t) {
+      case HabitType.screen:
+        return 'Screen time';
+      case HabitType.workout:
+        return 'Workout';
+      case HabitType.study:
+        return 'Study';
+      case HabitType.read:
+        return 'Read';
+      case HabitType.sleep:
+        return 'Phone down';
+      case HabitType.money:
+        return 'Spending';
+      case HabitType.tidy:
+        return 'Tidy up';
+      case HabitType.other:
+        return 'Habit';
+    }
+  }
+
+  static String _detail(HabitType t, String title) {
+    final n = RegExp(r'\d+').firstMatch(title)?.group(0) ?? '';
+    switch (t) {
+      case HabitType.screen:
+        return 'Under $n hours';
+      case HabitType.workout:
+      case HabitType.study:
+      case HabitType.tidy:
+        return '$n minutes';
+      case HabitType.read:
+        return '$n pages';
+      case HabitType.sleep:
+        return 'By ${RegExp(r'by (.+)$').firstMatch(title)?.group(1) ?? '11pm'}';
+      case HabitType.money:
+        return 'Log it today';
+      case HabitType.other:
+        return title;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -67,74 +112,74 @@ class HabitCard extends StatelessWidget {
     final look = _lookFor(type, title);
     final done = status == 'passed' || status == 'passed_by_partner';
     final waiting = status == 'pending_partner' || status == 'appealed';
-    final tag = done
-        ? (status == 'passed_by_partner' ? 'Confirmed by partner' : 'Done')
+    final line = done
+        ? 'Done'
         : waiting
             ? 'Waiting for partner'
             : status == 'failed'
                 ? 'Not confirmed'
-                : look.hint;
+                : (this.detail ?? _detail(type, title));
     final color = done ? _green : look.color;
-    final ring = _Ring(
-      value: done ? 1 : (waiting ? 0.5 : 0),
-      color: color,
-      child: done
-          ? Icon(Icons.check_rounded, color: color, size: 34)
-          : look.big.isEmpty
-              ? Icon(look.icon, color: color, size: 30)
-              : Column(mainAxisSize: MainAxisSize.min, children: [
-                  Text(look.big,
-                      style: GoogleFonts.lexend(fontSize: look.big.length > 3 ? 15 : 22, fontWeight: FontWeight.w700, color: _ink)),
-                  Text(look.unit, style: GoogleFonts.lexend(fontSize: 10, color: _muted)),
-                ]),
-    );
     return Semantics(
       container: true,
-      label: '$title. $tag',
+      label: '${_name(type)}. $line',
       child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.fromLTRB(12, 18, 12, 12),
         decoration: BoxDecoration(
           color: done ? const Color(0xFFF1FAF5) : Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: done ? _green.withOpacity(0.4) : _line, width: 1.5),
+          borderRadius: BorderRadius.circular(22),
+          border: Border.all(color: done ? _green.withValues(alpha: 0.4) : _line, width: 1.5),
         ),
-        child: Row(children: [
-          SizedBox(width: 78, height: 78, child: ring),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Row(children: [
-                Icon(look.icon, size: 16, color: color),
-                const SizedBox(width: 6),
-                if (type == HabitType.screen && !done)
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                    decoration: BoxDecoration(color: _soft, borderRadius: BorderRadius.circular(99)),
-                    child: Text('x1.5 XP', style: GoogleFonts.lexend(fontSize: 11, fontWeight: FontWeight.w700, color: _orange)),
-                  ),
-              ]),
-              const SizedBox(height: 4),
-              Text(title, style: GoogleFonts.lexend(fontSize: 16, fontWeight: FontWeight.w600, color: _ink, height: 1.2)),
-              const SizedBox(height: 2),
-              Text(tag, style: GoogleFonts.lexend(fontSize: 12, color: done ? _green : _muted)),
-              if (!done) ...[
-                const SizedBox(height: 10),
-                SizedBox(
-                  height: 40,
-                  child: FilledButton(
-                    onPressed: onCheck,
-                    style: FilledButton.styleFrom(
-                      backgroundColor: color,
-                      padding: const EdgeInsets.symmetric(horizontal: 18),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
-                    child: Text(waiting ? 'Open' : look.button, style: GoogleFonts.lexend(fontSize: 14, fontWeight: FontWeight.w600)),
-                  ),
+        child: Column(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+          Column(children: [
+            SizedBox(
+              width: 76,
+              height: 76,
+              child: _Ring(
+                value: done ? 1 : (waiting ? 0.5 : (progress ?? 0)),
+                color: color,
+                child: Icon(done ? Icons.check_rounded : look.icon, color: color, size: 34),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(_name(type),
+                textAlign: TextAlign.center,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: GoogleFonts.lexend(fontSize: 16, fontWeight: FontWeight.w600, color: _ink)),
+            const SizedBox(height: 2),
+            Text(line,
+                textAlign: TextAlign.center,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: GoogleFonts.lexend(fontSize: 12, color: done ? _green : _muted)),
+            if (type == HabitType.screen && !done) ...[
+              const SizedBox(height: 6),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(color: _soft, borderRadius: BorderRadius.circular(99)),
+                child: Text('x1.5 XP', style: GoogleFonts.lexend(fontSize: 11, fontWeight: FontWeight.w700, color: _orange)),
+              ),
+            ],
+          ]),
+          const SizedBox(height: 14),
+          if (!done)
+            SizedBox(
+              width: double.infinity,
+              height: 40,
+              child: FilledButton(
+                onPressed: onCheck,
+                style: FilledButton.styleFrom(
+                  backgroundColor: color,
+                  padding: EdgeInsets.zero,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
-              ],
-            ]),
-          ),
+                child: Text(waiting ? 'Open' : (buttonLabel ?? (type == HabitType.screen ? 'Screenshot' : 'Check in')),
+                    maxLines: 1, style: GoogleFonts.lexend(fontSize: 13, fontWeight: FontWeight.w600)),
+              ),
+            )
+          else
+            const SizedBox(height: 40),
         ]),
       ),
     );
@@ -165,7 +210,7 @@ class _RingPainter extends CustomPainter {
       ..style = PaintingStyle.stroke
       ..strokeWidth = w
       ..strokeCap = StrokeCap.round
-      ..color = color.withOpacity(0.15);
+      ..color = color.withValues(alpha: 0.15);
     canvas.drawArc(r, 0, math.pi * 2, false, base);
     if (value > 0) {
       canvas.drawArc(r, -math.pi / 2, math.pi * 2 * value, false, base..color = color);

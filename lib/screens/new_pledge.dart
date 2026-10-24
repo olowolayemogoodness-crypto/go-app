@@ -99,7 +99,7 @@ class _NewPledgeScreenState extends State<NewPledgeScreen> {
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
                         decoration: BoxDecoration(color: _soft, borderRadius: BorderRadius.circular(99)),
-                        child: Text('Simulated premium. No real money.',
+                        child: Text('Simulated fee. No real money.',
                             style: GoogleFonts.lexend(fontSize: 12, fontWeight: FontWeight.w600, color: _orange)),
                       ),
                     ),
@@ -108,7 +108,7 @@ class _NewPledgeScreenState extends State<NewPledgeScreen> {
                         style: GoogleFonts.fredoka(fontSize: 32, fontWeight: FontWeight.w700, color: _ink, height: 1.1)),
                     const SizedBox(height: 8),
                     Text(
-                        'Finish at least one habit every day (3 grace passes) and 90% overall, and you get half your premium back.',
+                        'Finish at least one habit every day (3 grace passes) and 90% overall, and you get your whole fee back.',
                         style: GoogleFonts.lexend(fontSize: 14, height: 1.45, color: _muted)),
                     _label('Your habits'),
                     for (final h in _habits)
@@ -123,7 +123,7 @@ class _NewPledgeScreenState extends State<NewPledgeScreen> {
                           Expanded(child: Text(h['title']!, style: GoogleFonts.lexend(fontSize: 15, color: _ink))),
                         ]),
                       ),
-                    _label('Premium: $_premium coins'),
+                    _label('Commitment fee: $_premium coins'),
                     Wrap(spacing: 8, children: [
                       for (final v in const [500, 1000, 2000, 3000])
                         ChoiceChip(
@@ -137,7 +137,7 @@ class _NewPledgeScreenState extends State<NewPledgeScreen> {
                         ),
                     ]),
                     const SizedBox(height: 8),
-                    Text('Win and ${_premium ~/ 2} comes back. Otherwise GO keeps it.',
+                    Text('Follow through and all $_premium comes back. Quit and GO keeps it.',
                         style: GoogleFonts.lexend(fontSize: 13, color: _muted)),
                     _label('Accountability partner'),
                     TextField(
@@ -163,7 +163,7 @@ class _NewPledgeScreenState extends State<NewPledgeScreen> {
                         onPressed: _busy ? null : _start,
                         style: FilledButton.styleFrom(
                             backgroundColor: _ink, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18))),
-                        child: Text(_busy ? 'Starting...' : 'Pay $_premium and start',
+                        child: Text(_busy ? 'Starting...' : 'Commit $_premium and start',
                             style: GoogleFonts.lexend(fontSize: 16, fontWeight: FontWeight.w600)),
                       ),
                     ),

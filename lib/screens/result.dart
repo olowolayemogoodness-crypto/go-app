@@ -25,9 +25,9 @@ class ResultScreen extends StatelessWidget {
         final fs = (p['finalStats'] as Map?) ?? const {};
         final msg = won
             ? 'You did something every day and finished ${fs['overallPct'] ?? 90}% or more. '
-                'You get $refund of your $premium premium back (simulated).'
+                'Your whole commitment fee of $refund coins is back in your balance (simulated).'
             : 'The program ended because the daily streak broke or too many activities were missed. '
-                'The simulated premium of $premium is not returned. Nothing real was charged.';
+                'The simulated commitment fee of $premium coins is not returned. Nothing real was charged.';
         return PageShell(
           title: won ? 'You won' : 'Program ended',
           showBack: false,

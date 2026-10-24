@@ -8,11 +8,11 @@ class SimBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     final p = Pal.of(context);
     return Semantics(
-      label: 'Simulated premium. No real money is used.',
+      label: 'Simulated fee. No real money is used.',
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(color: p.sunSoft, borderRadius: BorderRadius.circular(20)),
-        child: Text('SIMULATED PREMIUM · no real money',
+        child: Text('SIMULATED FEE · no real money',
             style: TextStyle(color: p.orange, fontWeight: FontWeight.w700, fontSize: 11)),
       ),
     );

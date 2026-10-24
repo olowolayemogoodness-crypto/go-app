@@ -282,6 +282,45 @@ Future<T> _wrap<T>(Future<T> Function() f) async {
 }
 
 class Api {
+  /// Called by the PDF reader: when today's verified pages reach the goal, the Read habit passes.
+  static Future<bool> completeReadingToday(int pagesToday) async {
+    try {
+      final q = await _db
+          .collection('pledges')
+          .where('uid', isEqualTo: _uid)
+          .where('status', isEqualTo: 'active')
+          .limit(1)
+          .get();
+      if (q.docs.isEmpty) return false;
+      final ref = q.docs.first.reference;
+      final p = q.docs.first.data();
+      final reads = (p['activities'] as List).cast<Map>().where((a) => '${a['title']}'.toLowerCase().startsWith('read')).toList();
+      if (reads.isEmpty) return false;
+      final act = Map<String, dynamic>.from(reads.first);
+      final goal = int.tryParse(RegExp(r'\d+').firstMatch('${act['title']}')?.group(0) ?? '') ?? 20;
+      if (pagesToday < goal) return false;
+      final day = _activeToday(p);
+      final ckRef = _actRef(ref, day, act['id'] as String);
+      final ck = (await ckRef.get()).data() ?? {};
+      if (_doneSet.contains(ck['status'])) return false;
+      await ckRef.set({
+        'day': day,
+        'actId': act['id'],
+        'status': 'passed',
+        'verdict': 'PASS',
+        'confidence': 1,
+        'reason': 'Read $pagesToday pages in the GO reader.',
+        'source': 'reader',
+        'verifiedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+      await _award(10);
+      await _reconcile(ref);
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
   // ----- program -----
   static Future<String> createPledge(Map<String, dynamic> d) => _wrap(() async {
         final uid = _uid;
@@ -302,7 +341,7 @@ class Api {
         }
         if (acts.isEmpty) throw ApiError('Add at least one activity.');
         if (partner.isEmpty) throw ApiError('Name an accountability partner.');
-        if (premium < 100) throw ApiError('Premium must be at least 100.');
+        if (premium < 100) throw ApiError('The commitment fee must be at least 100.');
         if (acts.any((a) => a['kind'] == 'github') && !RegExp(r'^[a-zA-Z0-9-]{1,39}$').hasMatch(gh)) {
           throw ApiError('Enter a valid GitHub username.');
         }
@@ -317,7 +356,7 @@ class Api {
             'uid': uid,
             'days': _programDays,
             'premium': premium,
-            'refundAmount': premium ~/ 2,
+            'refundAmount': premium,
             'currency': 'SIM',
             'activities': acts,
             'githubUser': gh.isEmpty ? null : gh,
