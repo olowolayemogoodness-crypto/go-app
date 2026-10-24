@@ -1,0 +1,42 @@
+name: pledge
+description: Put something on the line. Get your goals done. Prove it.
+publish_to: "none"
+version: 1.0.0+1
+
+environment:
+  sdk: ">=3.4.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_web_plugins:
+    sdk: flutter
+  firebase_core: ^3.6.0
+  firebase_auth: ^5.3.1
+  cloud_firestore: ^5.4.4
+  camera: ^0.11.0
+  image: ^4.2.0
+  shared_preferences: ^2.3.2
+  flutter_tts: ^4.1.0
+  google_fonts: ^6.2.1
+  url_launcher: ^6.3.0
+  share_plus: ^10.0.2
+  firebase_ai: ^2.3.0
+  http: ^1.6.0
+  crypto: ^3.0.7
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+  flutter_native_splash: ^2.4.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/images/go_logo.png
+
+flutter_native_splash:
+  color: "#E08813"
+  image: assets/images/go_logo.png
+  web: false

@@ -1,0 +1,48 @@
+{
+  "firestore": {
+    "rules": "firestore.rules"
+  },
+  "hosting": {
+    "public": "build/web",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "rewrites": [
+      {
+        "source": "**",
+        "destination": "/index.html"
+      }
+    ]
+  },
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "go-hackathon-mac26",
+          "appId": "1:140049031369:android:ad0e37c1d5ced5a5b96d18",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "ios": {
+        "default": {
+          "projectId": "go-hackathon-mac26",
+          "appId": "1:140049031369:ios:2761b705e0421a30b96d18",
+          "uploadDebugSymbols": false,
+          "fileOutput": "ios/Runner/GoogleService-Info.plist"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "go-hackathon-mac26",
+          "configurations": {
+            "android": "1:140049031369:android:ad0e37c1d5ced5a5b96d18",
+            "ios": "1:140049031369:ios:2761b705e0421a30b96d18",
+            "web": "1:140049031369:web:dd51783a6162a599b96d18"
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,12 @@
+build/
+.dart_tool/
+.flutter-plugins*
+node_modules/
+.firebase/
+*.log
+.env
+.idea/
+*.iml
+.DS_Store
+firebase-debug.log
+ios/Pods/

@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "140049031369",
+    "project_id": "go-hackathon-mac26",
+    "storage_bucket": "go-hackathon-mac26.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:140049031369:android:ad0e37c1d5ced5a5b96d18",
+        "android_client_info": {
+          "package_name": "com.example.pledge"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDVnMgy0WHTe_jZALjdLBVs4ZUVA5u4whI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

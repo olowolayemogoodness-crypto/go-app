@@ -1,0 +1,32 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Users can read their own profile and change ONLY display prefs. Balance is server-owned.
+    match /users/{uid} {
+      allow read: if request.auth != null && request.auth.uid == uid;
+      allow update: if request.auth != null && request.auth.uid == uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['prefs']);
+      allow create: if false;
+
+      // Diary links: owner can read; saving and deleting go through Cloud Functions.
+      match /diary/{linkId} {
+        allow read: if request.auth != null && request.auth.uid == uid;
+        allow write: if false;
+      }
+    }
+    // Programs, daily activity check-ins and skipped days: read-only for the owner.
+    match /pledges/{pledgeId} {
+      allow read: if request.auth != null && resource.data.uid == request.auth.uid;
+      allow write: if false;
+      match /{sub}/{docId} {
+        allow read: if request.auth != null
+          && get(/databases/$(database)/documents/pledges/$(pledgeId)).data.uid == request.auth.uid;
+        allow write: if false;
+      }
+    }
+    // Partner tokens, usage counters and GitHub cache: server only.
+    match /confirmTokens/{t} { allow read, write: if false; }
+    match /usage/{u} { allow read, write: if false; }
+    match /githubCache/{g} { allow read, write: if false; }
+  }
+}
