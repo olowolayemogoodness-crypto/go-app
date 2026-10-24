@@ -2,6 +2,17 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 	<dict>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>app-1-140049031369-ios-2761b705e0421a30b96d18</string>
+			</array>
+		</dict>
+	</array>
 		<key>NSCameraUsageDescription</key>
 		<string>GO uses the camera to check that you did your activity.</string>
 		<key>CADisableMinimumFrameDurationOnPhone</key>
