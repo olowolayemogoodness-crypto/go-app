@@ -7,9 +7,12 @@ import 'package:flutter_tts/flutter_tts.dart';
 import '../services/api.dart';
 import '../theme/prefs.dart';
 import '../widgets/common.dart';
+import '../widgets/github_widget.dart';
+import '../widgets/habit_cards.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'checkin.dart';
+import 'github_screen.dart';
 import 'detail.dart';
-import 'diary.dart';
 
 const _done = {'passed', 'passed_by_partner'};
 
@@ -144,12 +147,6 @@ class _TodayScreenState extends State<TodayScreen> {
       showBack: false,
       actions: [
         IconButton(
-          tooltip: 'Diary',
-          icon: const Icon(Icons.menu_book_outlined),
-          onPressed: () => Navigator.push(
-              context, MaterialPageRoute(builder: (_) => const DiaryScreen())),
-        ),
-        IconButton(
           tooltip: 'Program details',
           icon: const Icon(Icons.calendar_month_outlined),
           onPressed: () => Navigator.push(context,
@@ -165,6 +162,7 @@ class _TodayScreenState extends State<TodayScreen> {
             textBaseline: TextBaseline.alphabetic,
             children: [
               Semantics(header: true, child: Text('Today', style: t.headlineMedium)),
+              _xp(),
               Text('Day $day of $days', style: TextStyle(fontWeight: FontWeight.w600, color: pal.muted)),
             ],
           ),
@@ -228,7 +226,7 @@ class _TodayScreenState extends State<TodayScreen> {
           const SizedBox(height: 22),
           Text('Your list for today', style: t.titleLarge),
           const SizedBox(height: 10),
-          for (final a in acts) _row(context, p, a, day, status[a['id']] ?? 'pending'),
+          for (final a in acts) _habitCard(context, p, a, day, status[a['id']] ?? 'pending'),
           if (doneN == 0 && grace > 0)
             TextButton(
               onPressed: _busy ? null : _grace,
@@ -239,6 +237,81 @@ class _TodayScreenState extends State<TodayScreen> {
     );
   }
 
+  Widget _xp() {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return const SizedBox.shrink();
+    return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+      stream: FirebaseFirestore.instance.doc('users/$uid').snapshots(),
+      builder: (context, s) => XpChip(xp: (s.data?.data()?['xp'] as num?)?.toInt() ?? 0),
+    );
+  }
+
+  Widget _habitCard(BuildContext context, Map<String, dynamic> p, Map a, int day, String st) {
+    if (a['kind'] == 'github' && '${p['githubUser'] ?? ''}'.isNotEmpty) {
+      final isDone = _done.contains(st);
+      final waiting = st == 'pending_partner' || st == 'appealed';
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 12),
+        child: GitHubCard(
+          user: '${p['githubUser']}',
+          done: isDone,
+          statusText: waiting ? 'Waiting for partner' : (st == 'failed' ? 'Not confirmed' : ''),
+          onOpen: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (_) => GithubScreen(
+                        user: '${p['githubUser']}',
+                        done: isDone,
+                        onCheck: () async {
+                          await Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (_) => CheckInScreen(
+                                      pledgeId: widget.pledgeId,
+                                      actId: a['id'] as String,
+                                      title: '${a['title']}',
+                                      kind: 'github',
+                                      day: day,
+                                      partnerName: '${p['partnerName']}')));
+                          _sync();
+                        },
+                      ))),
+          onCheck: () async {
+            await Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (_) => CheckInScreen(
+                        pledgeId: widget.pledgeId,
+                        actId: a['id'] as String,
+                        title: '${a['title']}',
+                        kind: 'github',
+                        day: day,
+                        partnerName: '${p['partnerName']}')));
+            _sync();
+          },
+        ),
+      );
+    }
+    return HabitCard(
+      title: '${a['title']}',
+      status: st,
+      onCheck: () async {
+        await Navigator.push(
+            context,
+            MaterialPageRoute(
+                builder: (_) => CheckInScreen(
+                    pledgeId: widget.pledgeId,
+                    actId: a['id'] as String,
+                    title: '${a['title']}',
+                    kind: '${a['kind']}',
+                    day: day,
+                    partnerName: '${p['partnerName']}')));
+        _sync();
+      },
+    );
+  }
+
+  // ignore: unused_element
   Widget _row(BuildContext context, Map<String, dynamic> p, Map a, int day, String st) {
     final pal = Pal.of(context);
     final isDone = _done.contains(st);

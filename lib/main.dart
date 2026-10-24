@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_web_plugins/url_strategy.dart';
 
 import 'firebase_options.dart';
-import 'screens/home.dart';
 import 'screens/partner.dart';
 import 'screens/sign_in.dart';
 import 'theme/prefs.dart';

@@ -147,7 +147,7 @@ class _DiaryScreenState extends State<DiaryScreen> {
     final t = Theme.of(context).textTheme;
     final uid = FirebaseAuth.instance.currentUser?.uid;
     return PageShell(
-      title: 'Diary',
+      title: 'Saves',
       showBadge: false,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,

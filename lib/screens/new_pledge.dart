@@ -1,200 +1,197 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import '../services/api.dart';
-import '../widgets/common.dart';
-import '../theme/prefs.dart';
+import '../widgets/habit_cards.dart';
 
-/// "Start your 30 days": pick activities, pay a simulated premium, name a partner.
+const _bg = Color(0xFFFFF9F2);
+const _ink = Color(0xFF1B1B1F);
+const _muted = Color(0xFF6C6C75);
+const _orange = Color(0xFFE08813);
+const _soft = Color(0xFFFFF0DA);
+const _line = Color(0xFFE9DFD2);
+
+/// Your plan: the habits you chose, a simulated premium, a partner, start.
 class NewPledgeScreen extends StatefulWidget {
   const NewPledgeScreen({super.key});
   @override
   State<NewPledgeScreen> createState() => _NewPledgeScreenState();
 }
 
-class _Act {
-  final TextEditingController title = TextEditingController();
-  String kind = 'camera';
-}
-
 class _NewPledgeScreenState extends State<NewPledgeScreen> {
-  final List<_Act> _acts = [_Act()];
-  double _premium = 1000;
+  List<Map<String, String>> _habits = [];
+  String _github = '';
+  int _premium = 1000;
   final _partner = TextEditingController();
-  final _github = TextEditingController();
-  bool _busy = false;
+  bool _loading = true, _busy = false;
+  String? _err;
 
   @override
   void initState() {
     super.initState();
-    _prefill();
+    _load();
   }
-
-  /// Starter activities suggested by the questionnaire answers.
-  Future<void> _prefill() async {
-    try {
-      final uid = FirebaseAuth.instance.currentUser?.uid;
-      if (uid == null) return;
-      final s = await FirebaseFirestore.instance.doc('users/$uid').get();
-      final sug = ((s.data()?['profile'] as Map?)?['suggested'] as List?)?.cast<Map>();
-      if (sug == null || sug.isEmpty || !mounted) return;
-      if (_acts.length == 1 && _acts[0].title.text.isEmpty) {
-        setState(() {
-          _acts.clear();
-          for (final m in sug) {
-            final a = _Act();
-            a.title.text = '${m['title']}';
-            a.kind = '${m['kind']}' == 'github' ? 'github' : 'camera';
-            _acts.add(a);
-          }
-        });
-      }
-    } catch (_) {}
-  }
-
-  bool get _hasGithub => _acts.any((a) => a.kind == 'github');
 
   @override
   void dispose() {
-    for (final a in _acts) {
-      a.title.dispose();
-    }
     _partner.dispose();
-    _github.dispose();
     super.dispose();
   }
 
+  Future<void> _load() async {
+    try {
+      final uid = FirebaseAuth.instance.currentUser?.uid;
+      final s = await FirebaseFirestore.instance.doc('users/$uid').get();
+      final prof = (s.data()?['profile'] as Map?) ?? {};
+      _github = '${prof['githubUser'] ?? ''}';
+      _habits = [
+        for (final h in (prof['habits'] as List? ?? const []))
+          {'title': '${(h as Map)['title']}', 'kind': '${h['kind']}' == 'github' ? 'github' : 'camera'}
+      ];
+    } catch (_) {}
+    if (mounted) setState(() => _loading = false);
+  }
+
   Future<void> _start() async {
-    final acts = [
-      for (final a in _acts)
-        if (a.title.text.trim().isNotEmpty) {'title': a.title.text.trim(), 'kind': a.kind}
-    ];
-    if (acts.isEmpty) return showSnack(context, 'Add at least one activity.');
-    if (_partner.text.trim().isEmpty) return showSnack(context, 'Name your accountability partner.');
-    if (_hasGithub && _github.text.trim().isEmpty) {
-      return showSnack(context, 'Enter your GitHub username.');
-    }
-    setState(() => _busy = true);
+    if (_habits.isEmpty) return setState(() => _err = 'No habits found. Sign out and pick your habits again.');
+    if (_partner.text.trim().isEmpty) return setState(() => _err = 'Name your accountability partner.');
+    setState(() {
+      _busy = true;
+      _err = null;
+    });
     try {
       await Api.createPledge({
-        'activities': acts,
-        'premium': _premium.round(),
+        'activities': _habits,
+        'premium': _premium,
         'partnerName': _partner.text.trim(),
-        'githubUser': _hasGithub ? _github.text.trim() : '',
+        'githubUser': _habits.any((h) => h['kind'] == 'github') ? _github : '',
         'tzOffsetMin': DateTime.now().timeZoneOffset.inMinutes,
       });
-      if (mounted) Navigator.of(context).popUntil((r) => r.isFirst);
     } on ApiError catch (e) {
-      if (mounted) showSnack(context, e.message);
+      if (mounted) setState(() => _err = e.message);
+    } catch (e) {
+      if (mounted) setState(() => _err = 'Could not start: $e');
     } finally {
       if (mounted) setState(() => _busy = false);
     }
   }
 
+  Widget _label(String t) => Padding(
+        padding: const EdgeInsets.only(bottom: 8, top: 22),
+        child: Text(t, style: GoogleFonts.lexend(fontSize: 16, fontWeight: FontWeight.w600, color: _ink)),
+      );
+
   @override
   Widget build(BuildContext context) {
-    final p = Pal.of(context);
-    final t = Theme.of(context).textTheme;
-    final premium = _premium.round();
-    return PageShell(
-      title: 'Start your 30 days',
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text('1. What will you do every day?', style: t.titleLarge),
-          const SizedBox(height: 4),
-          Text('Up to 5 activities. Each one you finish charges your battery.',
-              style: TextStyle(color: p.muted)),
-          const SizedBox(height: 12),
-          for (var i = 0; i < _acts.length; i++)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: ChunkyCard(
-                padding: const EdgeInsets.all(14),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Row(children: [
-                      Expanded(
-                        child: TextField(
-                          controller: _acts[i].title,
-                          maxLength: 80,
-                          decoration: InputDecoration(labelText: 'Activity ${i + 1}', counterText: ''),
-                        ),
+    return Scaffold(
+      backgroundColor: _bg,
+      body: SafeArea(
+        child: _loading
+            ? const Center(child: CircularProgressIndicator(color: _orange))
+            : Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 460),
+                  child: ListView(padding: const EdgeInsets.fromLTRB(24, 16, 24, 28), children: [
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                        decoration: BoxDecoration(color: _soft, borderRadius: BorderRadius.circular(99)),
+                        child: Text('Simulated premium. No real money.',
+                            style: GoogleFonts.lexend(fontSize: 12, fontWeight: FontWeight.w600, color: _orange)),
                       ),
-                      if (_acts.length > 1)
-                        IconButton(
-                          tooltip: 'Remove activity ${i + 1}',
-                          icon: const Icon(Icons.close),
-                          onPressed: () => setState(() => _acts.removeAt(i)),
+                    ),
+                    const SizedBox(height: 14),
+                    Text('Your 30-day plan',
+                        style: GoogleFonts.fredoka(fontSize: 32, fontWeight: FontWeight.w700, color: _ink, height: 1.1)),
+                    const SizedBox(height: 8),
+                    Text(
+                        'Finish at least one habit every day (3 grace passes) and 90% overall, and you get half your premium back.',
+                        style: GoogleFonts.lexend(fontSize: 14, height: 1.45, color: _muted)),
+                    _label('Your habits'),
+                    for (final h in _habits)
+                      Container(
+                        margin: const EdgeInsets.only(bottom: 8),
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                        decoration: BoxDecoration(
+                            color: Colors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: _line, width: 1.5)),
+                        child: Row(children: [
+                          Icon(h['kind'] == 'github' ? Icons.code_rounded : _iconFor(h['title']!), color: _orange),
+                          const SizedBox(width: 12),
+                          Expanded(child: Text(h['title']!, style: GoogleFonts.lexend(fontSize: 15, color: _ink))),
+                        ]),
+                      ),
+                    _label('Premium: $_premium coins'),
+                    Wrap(spacing: 8, children: [
+                      for (final v in const [500, 1000, 2000, 3000])
+                        ChoiceChip(
+                          label: Text('$v', style: GoogleFonts.lexend(fontWeight: FontWeight.w600)),
+                          selected: _premium == v,
+                          showCheckmark: false,
+                          selectedColor: _soft,
+                          backgroundColor: Colors.white,
+                          side: BorderSide(color: _premium == v ? _orange : _line, width: 1.5),
+                          onSelected: (_) => setState(() => _premium = v),
                         ),
                     ]),
-                    const SizedBox(height: 10),
-                    SegmentedButton<String>(
-                      segments: const [
-                        ButtonSegment(value: 'camera', label: Text('Camera proof'), icon: Icon(Icons.photo_camera)),
-                        ButtonSegment(value: 'github', label: Text('GitHub'), icon: Icon(Icons.code)),
-                      ],
-                      selected: {_acts[i].kind},
-                      onSelectionChanged: (s) => setState(() => _acts[i].kind = s.first),
+                    const SizedBox(height: 8),
+                    Text('Win and ${_premium ~/ 2} comes back. Otherwise GO keeps it.',
+                        style: GoogleFonts.lexend(fontSize: 13, color: _muted)),
+                    _label('Accountability partner'),
+                    TextField(
+                      controller: _partner,
+                      style: GoogleFonts.lexend(fontSize: 16),
+                      decoration: InputDecoration(
+                        hintText: 'Who can overrule the checker?',
+                        filled: true,
+                        fillColor: Colors.white,
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: _line, width: 1.5)),
+                        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: _line, width: 1.5)),
+                        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: _orange, width: 2)),
+                      ),
                     ),
-                  ],
+                    if (_err != null) ...[
+                      const SizedBox(height: 12),
+                      Text(_err!, style: GoogleFonts.lexend(fontSize: 13, color: const Color(0xFFC0392B))),
+                    ],
+                    const SizedBox(height: 24),
+                    SizedBox(
+                      height: 56,
+                      child: FilledButton(
+                        onPressed: _busy ? null : _start,
+                        style: FilledButton.styleFrom(
+                            backgroundColor: _ink, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18))),
+                        child: Text(_busy ? 'Starting...' : 'Pay $_premium and start',
+                            style: GoogleFonts.lexend(fontSize: 16, fontWeight: FontWeight.w600)),
+                      ),
+                    ),
+                  ]),
                 ),
               ),
-            ),
-          if (_acts.length < 5)
-            OutlinedButton.icon(
-              onPressed: () => setState(() => _acts.add(_Act())),
-              icon: const Icon(Icons.add),
-              label: const Text('Add another activity'),
-            ),
-          if (_hasGithub) ...[
-            const SizedBox(height: 16),
-            TextField(
-              controller: _github,
-              decoration: const InputDecoration(labelText: 'Your GitHub username'),
-            ),
-          ],
-          const SizedBox(height: 28),
-          Text('2. Pay your premium', style: t.titleLarge),
-          const SizedBox(height: 4),
-          Text('Simulated coins only. No real money.', style: TextStyle(color: p.muted)),
-          Slider(
-            value: _premium,
-            min: 100,
-            max: 3000,
-            divisions: 29,
-            label: '$premium',
-            semanticFormatterCallback: (v) => '${v.round()} simulated coins',
-            onChanged: (v) => setState(() => _premium = v),
-          ),
-          ChunkyCard(
-            color: p.ink,
-            padding: const EdgeInsets.all(14),
-            child: Text(
-              'Premium: $premium. Finish all 30 days with at least 90% done and you get '
-              '${premium ~/ 2} back. Otherwise GO keeps the premium.',
-              style: TextStyle(color: p.sunSoft, fontWeight: FontWeight.w600, height: 1.4),
-            ),
-          ),
-          const SizedBox(height: 28),
-          Text('3. Pick a partner', style: t.titleLarge),
-          const SizedBox(height: 4),
-          Text('Someone who can overrule the checker. They answer with one link, no account.',
-              style: TextStyle(color: p.muted)),
-          const SizedBox(height: 8),
-          TextField(controller: _partner, decoration: const InputDecoration(labelText: 'Partner name')),
-          const SizedBox(height: 16),
-          Text(
-            'Win rule: do at least one activity every single day (3 grace passes protect you) '
-            'and finish at least 90% of all activities.',
-            style: TextStyle(color: p.muted),
-          ),
-          const SizedBox(height: 16),
-          BigButton(label: _busy ? 'Starting...' : 'Pay $premium and start', icon: Icons.bolt, onPressed: _busy ? null : _start),
-        ],
       ),
     );
+  }
+
+  IconData _iconFor(String title) {
+    switch (habitTypeOf(title)) {
+      case HabitType.screen:
+        return Icons.phone_iphone_rounded;
+      case HabitType.workout:
+        return Icons.fitness_center_rounded;
+      case HabitType.study:
+        return Icons.menu_book_outlined;
+      case HabitType.read:
+        return Icons.auto_stories_outlined;
+      case HabitType.sleep:
+        return Icons.bedtime_outlined;
+      case HabitType.money:
+        return Icons.savings_outlined;
+      case HabitType.tidy:
+        return Icons.checklist_rounded;
+      default:
+        return Icons.bolt_rounded;
+    }
   }
 }

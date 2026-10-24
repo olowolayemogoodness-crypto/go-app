@@ -17,7 +17,7 @@ class AuthService {
     final auth = FirebaseAuth.instance;
     try {
       if (kIsWeb) {
-        await auth.signInWithPopup(provider as AuthProvider);
+        await auth.signInWithPopup(provider);
       } else {
         await auth.signInWithProvider(provider);
       }

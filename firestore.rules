@@ -1,32 +1,44 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Users can read their own profile and change ONLY display prefs. Balance is server-owned.
-    match /users/{uid} {
-      allow read: if request.auth != null && request.auth.uid == uid;
-      allow update: if request.auth != null && request.auth.uid == uid
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['prefs']);
-      allow create: if false;
+    function signedIn() { return request.auth != null; }
 
-      // Diary links: owner can read; saving and deleting go through Cloud Functions.
+    // Client-only app (no server): owners read and write their own records.
+    match /users/{uid} {
+      allow read, write: if signedIn() && request.auth.uid == uid;
       match /diary/{linkId} {
-        allow read: if request.auth != null && request.auth.uid == uid;
-        allow write: if false;
+        allow read, write: if signedIn() && request.auth.uid == uid;
       }
     }
-    // Programs, daily activity check-ins and skipped days: read-only for the owner.
+
     match /pledges/{pledgeId} {
-      allow read: if request.auth != null && resource.data.uid == request.auth.uid;
-      allow write: if false;
-      match /{sub}/{docId} {
-        allow read: if request.auth != null
+      allow read: if signedIn() && resource.data.uid == request.auth.uid;
+      allow create: if signedIn() && request.resource.data.uid == request.auth.uid;
+      allow update: if signedIn() && resource.data.uid == request.auth.uid
+        && request.resource.data.uid == request.auth.uid;
+      allow delete: if false;
+
+      match /days/{d} {
+        allow read, write: if signedIn()
           && get(/databases/$(database)/documents/pledges/$(pledgeId)).data.uid == request.auth.uid;
-        allow write: if false;
+      }
+
+      match /acts/{a} {
+        // Owner can list and write. A partner opens one exact link, so single reads are allowed
+        // (the pledge id in the path is random and unguessable).
+        allow list: if signedIn()
+          && get(/databases/$(database)/documents/pledges/$(pledgeId)).data.uid == request.auth.uid;
+        allow get: if signedIn();
+        allow create, update: if signedIn()
+          && get(/databases/$(database)/documents/pledges/$(pledgeId)).data.uid == request.auth.uid;
+        // Partner answer: must carry the secret from the link, and only while a review is open.
+        allow update: if signedIn()
+          && resource.data.status in ['pending_partner', 'appealed']
+          && request.resource.data.partnerKey == resource.data.partnerToken
+          && request.resource.data.status in ['passed_by_partner', 'failed']
+          && request.resource.data.diff(resource.data).affectedKeys()
+               .hasOnly(['status', 'partnerNote', 'partnerKey']);
       }
     }
-    // Partner tokens, usage counters and GitHub cache: server only.
-    match /confirmTokens/{t} { allow read, write: if false; }
-    match /usage/{u} { allow read, write: if false; }
-    match /githubCache/{g} { allow read, write: if false; }
   }
 }

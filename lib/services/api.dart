@@ -262,6 +262,12 @@ Future<String> _openPartnerReview(DocumentReference<Map<String, dynamic>> ref, M
   return '${ref.id}.${day}_${act['id']}.$secret';
 }
 
+Future<void> _award(int xp) async {
+  try {
+    await _db.doc('users/$_uid').set({'xp': FieldValue.increment(xp)}, SetOptions(merge: true));
+  } catch (_) {}
+}
+
 Future<T> _wrap<T>(Future<T> Function() f) async {
   try {
     return await f();
@@ -444,6 +450,7 @@ Return ONLY JSON with keys: verdict (PASS|FAIL|UNSURE), confidence (0 to 1), cod
         String? token;
         if (!needsPartner) {
           await ckRef.set({...base, 'status': 'passed'}, SetOptions(merge: true));
+          await _award(10);
         } else {
           await ckRef.set({...base, 'status': 'pending_partner'}, SetOptions(merge: true));
           token = await _openPartnerReview(ref, p, day, act, 'review');
@@ -513,6 +520,7 @@ Return ONLY JSON with keys: verdict (PASS|FAIL|UNSURE), confidence (0 to 1), cod
             'day': day, 'actId': act['id'], 'status': 'passed', 'verdict': 'PASS', 'confidence': 1,
             'reason': reason, 'evidence': ev, 'verifiedAt': FieldValue.serverTimestamp(),
           }, SetOptions(merge: true));
+          await _award(10);
           await _reconcile(ref);
           return {'verdict': 'PASS', 'evidence': ev, 'reason': reason, 'needsPartner': false};
         }

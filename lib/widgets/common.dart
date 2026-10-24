@@ -11,12 +11,9 @@ class SimBadge extends StatelessWidget {
       label: 'Simulated premium. No real money is used.',
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        decoration: BoxDecoration(
-          color: p.ink,
-          borderRadius: BorderRadius.circular(20),
-        ),
+        decoration: BoxDecoration(color: p.sunSoft, borderRadius: BorderRadius.circular(20)),
         child: Text('SIMULATED PREMIUM · no real money',
-            style: TextStyle(color: p.ground, fontWeight: FontWeight.w700, fontSize: 12)),
+            style: TextStyle(color: p.orange, fontWeight: FontWeight.w700, fontSize: 11)),
       ),
     );
   }
@@ -78,12 +75,12 @@ class PageShell extends StatelessWidget {
   }
 }
 
-/// Card with a thick outline and a hard offset shadow.
+/// Clean white card with a soft border and a gentle shadow.
 class ChunkyCard extends StatelessWidget {
   final Widget child;
   final Color? color;
   final EdgeInsets padding;
-  final double angle;
+  final double angle; // kept for compatibility, ignored
   final bool shadow;
   const ChunkyCard({
     super.key,
@@ -97,22 +94,22 @@ class ChunkyCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final p = Pal.of(context);
-    Widget w = Container(
+    return Container(
       padding: padding,
       decoration: BoxDecoration(
         color: color ?? p.card,
         borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: p.ink, width: 2.5),
-        boxShadow: shadow ? [BoxShadow(color: p.ink, offset: const Offset(0, 6))] : null,
+        border: Border.all(color: p.line, width: 1.5),
+        boxShadow: shadow
+            ? [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 18, offset: const Offset(0, 6))]
+            : null,
       ),
       child: child,
     );
-    if (angle != 0) w = Transform.rotate(angle: angle, child: w);
-    return Padding(padding: EdgeInsets.only(bottom: shadow ? 6 : 0), child: w);
   }
 }
 
-/// Big tomato button with a hard bottom shadow.
+/// Main button: dark and flat, or an outline.
 class BigButton extends StatelessWidget {
   final String label;
   final VoidCallback? onPressed;
@@ -125,41 +122,35 @@ class BigButton extends StatelessWidget {
     final p = Pal.of(context);
     final enabled = onPressed != null;
     final r = BorderRadius.circular(18);
-    final fg = outlined ? p.primary : (enabled ? p.onPrimary : p.muted);
+    final fg = outlined ? p.ink : (enabled ? p.onPrimary : p.muted);
     return Semantics(
       button: true,
       enabled: enabled,
       label: label,
       excludeSemantics: true,
-      child: Container(
-        margin: EdgeInsets.only(bottom: outlined ? 0 : 5),
-        decoration: BoxDecoration(
-          color: outlined ? Colors.transparent : (enabled ? p.primary : p.line),
+      child: Material(
+        color: outlined ? Colors.transparent : (enabled ? p.primary : p.line),
+        borderRadius: r,
+        child: InkWell(
           borderRadius: r,
-          border: outlined ? Border.all(color: p.primary, width: 2) : null,
-          boxShadow: (!outlined && enabled)
-              ? [BoxShadow(color: p.primaryShadow, offset: const Offset(0, 5))]
-              : null,
-        ),
-        child: Material(
-          type: MaterialType.transparency,
-          child: InkWell(
-            borderRadius: r,
-            onTap: onPressed,
-            child: SizedBox(
-              height: outlined ? 54 : 58,
-              child: Center(
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (icon != null) ...[Icon(icon, color: fg, size: 22), const SizedBox(width: 10)],
-                    Flexible(
-                      child: Text(label,
-                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: fg),
-                          textAlign: TextAlign.center),
-                    ),
-                  ],
-                ),
+          onTap: onPressed,
+          child: Container(
+            height: 56,
+            decoration: BoxDecoration(
+              borderRadius: r,
+              border: outlined ? Border.all(color: p.line, width: 1.5) : null,
+            ),
+            child: Center(
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (icon != null) ...[Icon(icon, color: fg, size: 22), const SizedBox(width: 10)],
+                  Flexible(
+                    child: Text(label,
+                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: fg),
+                        textAlign: TextAlign.center),
+                  ),
+                ],
               ),
             ),
           ),
@@ -188,28 +179,28 @@ class BatteryMeter extends StatelessWidget {
           children: [
             Expanded(
               child: Container(
-                height: 112,
-                padding: const EdgeInsets.all(7),
+                height: 96,
+                padding: const EdgeInsets.all(6),
                 decoration: BoxDecoration(
                   color: p.ground,
-                  border: Border.all(color: p.ink, width: 5),
+                  border: Border.all(color: p.ink, width: 3),
                   borderRadius: BorderRadius.circular(22),
                 ),
                 child: Row(
                   children: [
                     for (var i = 0; i < total; i++) ...[
-                      if (i > 0) const SizedBox(width: 7),
+                      if (i > 0) const SizedBox(width: 6),
                       Expanded(
                         child: AnimatedContainer(
                           duration: reduce ? Duration.zero : const Duration(milliseconds: 500),
                           curve: Curves.easeOutBack,
                           decoration: BoxDecoration(
                             color: i < done ? p.orange : Colors.transparent,
-                            borderRadius: BorderRadius.circular(12),
-                            border: i < done ? null : Border.all(color: p.field, width: 2.5),
+                            borderRadius: BorderRadius.circular(14),
+                            border: i < done ? null : Border.all(color: p.field, width: 2),
                           ),
                           child: i == next
-                              ? Center(child: Icon(Icons.bolt, size: 28, color: p.primary))
+                              ? Center(child: Icon(Icons.bolt_rounded, size: 26, color: p.orange))
                               : null,
                         ),
                       ),
@@ -219,11 +210,12 @@ class BatteryMeter extends StatelessWidget {
               ),
             ),
             Container(
-              width: 12,
-              height: 42,
+              width: 8,
+              height: 36,
+              margin: const EdgeInsets.only(left: 2),
               decoration: BoxDecoration(
                 color: p.ink,
-                borderRadius: const BorderRadius.horizontal(right: Radius.circular(8)),
+                borderRadius: const BorderRadius.horizontal(right: Radius.circular(6)),
               ),
             ),
           ],
@@ -241,18 +233,13 @@ class StatTile extends StatelessWidget {
   const StatTile({super.key, required this.value, required this.label, required this.color, required this.textColor});
   @override
   Widget build(BuildContext context) {
-    final p = Pal.of(context);
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
-      decoration: BoxDecoration(
-        color: color,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: p.ink, width: 2),
-      ),
+      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
+      decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(18)),
       child: Column(
         children: [
-          Text(value,
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(color: textColor)),
+          Text(value, style: Theme.of(context).textTheme.headlineSmall?.copyWith(color: textColor)),
+          const SizedBox(height: 2),
           Text(label,
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: textColor)),
@@ -271,26 +258,12 @@ class AccessibilityToggles extends StatelessWidget {
       builder: (context, _) => Column(
         mainAxisSize: MainAxisSize.min,
         children: [
+          SwitchListTile(title: const Text('Large text'), value: prefs.largeText, onChanged: prefs.setLargeText),
           SwitchListTile(
-            title: const Text('Large text'),
-            value: prefs.largeText,
-            onChanged: prefs.setLargeText,
-          ),
+              title: const Text('High contrast'), value: prefs.highContrastFor(context), onChanged: prefs.setHighContrast),
+          SwitchListTile(title: const Text('Dyslexia-friendly font'), value: prefs.dyslexiaFont, onChanged: prefs.setDyslexia),
           SwitchListTile(
-            title: const Text('High contrast'),
-            value: prefs.highContrastFor(context),
-            onChanged: prefs.setHighContrast,
-          ),
-          SwitchListTile(
-            title: const Text('Dyslexia-friendly font'),
-            value: prefs.dyslexiaFont,
-            onChanged: prefs.setDyslexia,
-          ),
-          SwitchListTile(
-            title: const Text('Reduce motion'),
-            value: prefs.reduceMotionFor(context),
-            onChanged: prefs.setReduceMotion,
-          ),
+              title: const Text('Reduce motion'), value: prefs.reduceMotionFor(context), onChanged: prefs.setReduceMotion),
         ],
       ),
     );
