@@ -39,7 +39,6 @@ flutter:
 
 flutter_native_splash:
   color: "#E08813"
-  image: assets/images/go_logo.png
   web: false
 
 flutter_launcher_icons:

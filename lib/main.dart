@@ -6,7 +6,7 @@ import 'package:flutter_web_plugins/url_strategy.dart';
 import 'firebase_options.dart';
 import 'screens/home.dart';
 import 'screens/partner.dart';
-import 'screens/splash.dart';
+import 'screens/sign_in.dart';
 import 'theme/prefs.dart';
 
 /// If the app was opened on /confirm/{token}, return the token.
@@ -29,7 +29,7 @@ Future<void> main() async {
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   await prefs.load();
   final token = _partnerTokenFromUrl();
-  if (FirebaseAuth.instance.currentUser == null) {
+  if (token != null && FirebaseAuth.instance.currentUser == null) {
     await FirebaseAuth.instance.signInAnonymously();
   }
   runApp(PledgeApp(partnerToken: token));
@@ -64,7 +64,7 @@ class PledgeApp extends StatelessWidget {
           },
           home: partnerToken != null
               ? PartnerScreen(token: partnerToken!)
-              : SplashScreen(next: (_) => const HomeGate()),
+              : const AuthGate(),
         );
       },
     );
